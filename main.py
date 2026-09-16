@@ -48,7 +48,6 @@ game_html = r"""
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 
 <style>
 
@@ -58,111 +57,128 @@ game_html = r"""
 
 body {
     margin: 0;
-    background: transparent;
+    background: #dcefe5;
     font-family: Arial, sans-serif;
     overflow: hidden;
 }
 
-#game {
+#gameWrapper {
     width: 100%;
+    height: 560px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#info {
+    width: 95%;
     max-width: 900px;
-    margin: auto;
-}
-
-canvas {
-    width: 100%;
-    display: block;
-    border-radius: 20px;
-    background: #dcefe3;
-    border: 2px solid #c5dfcf;
-    outline: none;
-}
-
-.stats {
+    height: 65px;
     display: flex;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
-.stat {
+.box {
     flex: 1;
     background: white;
     border-radius: 12px;
-    text-align: center;
-    padding: 9px 4px;
-    color: #245c45;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.label {
+    font-size: 13px;
     font-weight: bold;
-    font-size: 14px;
+    color: #245c45;
 }
 
-.stat span {
+.value {
     font-size: 20px;
+    font-weight: bold;
+    color: #164d39;
+    margin-top: 3px;
 }
 
-.help {
-    margin-top: 10px;
+#life {
+    letter-spacing: 3px;
+}
+
+#gameCanvas {
+    width: 95%;
+    max-width: 900px;
+    height: 430px;
+    margin-top: 8px;
+    border-radius: 18px;
+    border: 2px solid #b9dcc8;
+    background: #dff1e6;
+    outline: none;
+    cursor: crosshair;
+}
+
+#controls {
+    width: 95%;
+    max-width: 900px;
     background: white;
     border-radius: 12px;
-    padding: 11px;
+    margin-top: 8px;
+    padding: 10px;
     text-align: center;
-    color: #65746c;
+    color: #60766a;
     font-size: 13px;
 }
 
 #message {
-    position: fixed;
+    position: absolute;
+    top: 230px;
     left: 50%;
-    top: 42%;
-    transform: translate(-50%, -50%);
-    font-size: 38px;
-    font-weight: 900;
+    transform: translateX(-50%);
+    font-size: 30px;
+    font-weight: bold;
     color: #245c45;
-    pointer-events: none;
-    display: none;
     text-align: center;
-    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
 }
 
 </style>
+
 </head>
 
 <body>
 
-<div id="game">
+<div id="gameWrapper">
 
-    <canvas
-        id="canvas"
-        width="900"
-        height="520"
-        tabindex="0">
-    </canvas>
+    <div id="info">
 
-    <div class="stats">
-
-        <div class="stat">
-            LEVEL<br>
-            <span id="level">1</span>
+        <div class="box">
+            <div class="label">LEVEL</div>
+            <div class="value" id="level">1</div>
         </div>
 
-        <div class="stat">
-            SCORE<br>
-            <span id="score">0</span>
+        <div class="box">
+            <div class="label">SCORE</div>
+            <div class="value" id="score">0</div>
         </div>
 
-        <div class="stat">
-            LIFE<br>
-            <span id="life">❤️❤️❤️</span>
+        <div class="box">
+            <div class="label">LIFE</div>
+            <div class="value" id="life">❤️ ❤️ ❤️</div>
         </div>
 
-        <div class="stat">
-            COMBO<br>
-            <span id="combo">0</span>
+        <div class="box">
+            <div class="label">COMBO</div>
+            <div class="value" id="combo">0</div>
         </div>
 
     </div>
 
-    <div class="help">
-        ← → 이동　│　↑ ↓ 각도　│　SPACE 던지기　│　R 재시작
+    <canvas id="gameCanvas" tabindex="0"></canvas>
+
+    <div id="controls">
+        ← → 이동　|　↑ ↓ 각도　|　SPACE 던지기　|　R 재시작
     </div>
 
 </div>
@@ -172,15 +188,128 @@ canvas {
 
 <script>
 
-const canvas = document.getElementById("canvas");
+const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-canvas.focus();
+canvas.width = 900;
+canvas.height = 430;
 
 
-// ==================================================
-// 기본 게임 상태
-// ==================================================
+/* =========================
+   SOUND
+========================= */
+
+let audioContext = null;
+
+function initAudio() {
+
+    if (!audioContext) {
+        audioContext = new (
+            window.AudioContext ||
+            window.webkitAudioContext
+        )();
+    }
+
+    if (audioContext.state === "suspended") {
+        audioContext.resume();
+    }
+}
+
+
+function playTone(
+    frequency,
+    duration,
+    type = "sine",
+    volume = 0.08
+) {
+
+    initAudio();
+
+    const oscillator =
+        audioContext.createOscillator();
+
+    const gain =
+        audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(
+        volume,
+        audioContext.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime + duration
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+
+    oscillator.stop(
+        audioContext.currentTime + duration
+    );
+}
+
+
+/* 성공 */
+
+function successSound() {
+
+    playTone(660, 0.12, "sine", 0.08);
+
+    setTimeout(() => {
+        playTone(880, 0.16, "sine", 0.08);
+    }, 100);
+}
+
+
+/* 실패 */
+
+function missSound() {
+
+    playTone(180, 0.16, "triangle", 0.09);
+
+    setTimeout(() => {
+        playTone(120, 0.20, "triangle", 0.07);
+    }, 100);
+}
+
+
+/* 목숨 감소 */
+
+function lifeLostSound() {
+
+    playTone(240, 0.15, "square", 0.07);
+
+    setTimeout(() => {
+        playTone(150, 0.28, "square", 0.06);
+    }, 120);
+}
+
+
+/* 게임 오버 */
+
+function gameOverSound() {
+
+    playTone(300, 0.20, "sawtooth", 0.06);
+
+    setTimeout(() => {
+        playTone(220, 0.20, "sawtooth", 0.06);
+    }, 180);
+
+    setTimeout(() => {
+        playTone(140, 0.40, "sawtooth", 0.05);
+    }, 360);
+}
+
+
+/* =========================
+   GAME VARIABLES
+========================= */
 
 let level = 1;
 let score = 0;
@@ -193,241 +322,298 @@ let keys = {};
 
 let angle = 45;
 
-
-// ==================================================
-// 플레이어
-// ==================================================
-
-let player = {
-    x: 100,
-    y: 425,
-    width: 45,
-    height: 65,
-    speed: 6
-};
-
-
-// ==================================================
-// 쓰레기
-// ==================================================
-
 let projectile = null;
 
+let particles = [];
 
-// ==================================================
-// 쓰레기통
-// ==================================================
+let wind = 0;
 
-let bin = {
-    x: 700,
-    y: 365,
-    width: 80,
-    height: 100
+
+/* 플레이어 */
+
+let player = {
+
+    x: 90,
+
+    y: 325,
+
+    width: 42,
+
+    height: 60,
+
+    speed: 6
+
 };
 
 
-// 접근 금지 거리
+/* 쓰레기통 */
+
+let bin = {
+
+    x: 700,
+
+    y: 285,
+
+    width: 70,
+
+    height: 90
+
+};
+
+
+/* 접근 금지 거리 */
+
 let forbiddenDistance = 220;
 
 
-// ==================================================
-// 레벨별 설정
-// ==================================================
+/* =========================
+   LEVEL SETTINGS
+========================= */
 
 function getLevelSettings() {
 
     return {
 
-        // 레벨이 올라갈수록 중력 증가
         gravity:
-            0.28 + (level - 1) * 0.045,
+            0.28 +
+            (level - 1) * 0.045,
 
-        // 레벨이 올라갈수록 바람 증가
-        wind:
-            (Math.random() - 0.5)
-            * (0.10 + level * 0.045),
-
-        // 쓰레기통 크기 감소
         binSize:
             Math.max(
-                48,
-                80 - (level - 1) * 4
+                45,
+                75 - (level - 1) * 4
             ),
 
-        // 접근 금지 거리 증가
         forbidden:
             Math.min(
                 300,
                 220 + (level - 1) * 8
             ),
 
-        // 목표 정확도
-        tolerance:
-            Math.max(
-                8,
-                22 - (level - 1) * 1.2
-            )
+        windPower:
+            0.04 +
+            level * 0.012
+
     };
+
 }
 
 
-// ==================================================
-// 키 입력
-// ==================================================
+/* =========================
+   NEW BIN
+========================= */
 
-document.addEventListener("keydown", function(e) {
+function newBin() {
+
+    const settings =
+        getLevelSettings();
+
+    bin.width = settings.binSize;
+
+    bin.height =
+        settings.binSize * 1.25;
+
+    bin.x =
+        560 +
+        Math.random() * 280;
+
+    bin.x =
+        Math.min(
+            canvas.width -
+            bin.width -
+            20,
+            bin.x
+        );
+
+    bin.y =
+        285 +
+        Math.random() * 20;
+
+
+    forbiddenDistance =
+        settings.forbidden;
+
+
+    /*
+       플레이어와 쓰레기통의
+       거리가 너무 가까워지지 않게
+    */
+
+    const playerCenter =
+        player.x +
+        player.width / 2;
+
+    const binCenter =
+        bin.x +
+        bin.width / 2;
 
     if (
-        e.key === "ArrowLeft" ||
-        e.key === "ArrowRight" ||
-        e.key === "ArrowUp" ||
-        e.key === "ArrowDown" ||
-        e.code === "Space"
+        Math.abs(
+            binCenter -
+            playerCenter
+        ) < forbiddenDistance
     ) {
-        e.preventDefault();
+
+        bin.x =
+            player.x +
+            forbiddenDistance;
+
+        bin.x =
+            Math.min(
+                canvas.width -
+                bin.width -
+                20,
+                bin.x
+            );
     }
 
-    keys[e.key] = true;
 
-    if (e.code === "Space") {
+    /*
+       레벨마다 바람을 한 번만 결정
+       → 날아가는 동안 바람이 바뀌지 않음
+    */
 
-        if (
-            !gameOver &&
-            projectile === null
-        ) {
-            throwTrash();
-        }
+    wind =
+        (Math.random() * 2 - 1)
+        * settings.windPower;
 
-    }
-
-    if (
-        (e.key === "r" || e.key === "R") &&
-        gameOver
-    ) {
-        restart();
-    }
-
-});
+}
 
 
-document.addEventListener("keyup", function(e) {
-
-    keys[e.key] = false;
-
-});
-
-
-// ==================================================
-// 플레이어 이동
-// ==================================================
+/* =========================
+   PLAYER
+========================= */
 
 function updatePlayer() {
 
     if (keys["ArrowLeft"]) {
+
         player.x -= player.speed;
+
     }
 
     if (keys["ArrowRight"]) {
+
         player.x += player.speed;
+
     }
 
     if (keys["ArrowUp"]) {
+
         angle += 0.8;
+
     }
 
     if (keys["ArrowDown"]) {
+
         angle -= 0.8;
+
     }
 
 
-    // 각도 제한
-    angle = Math.max(
-        15,
-        Math.min(80, angle)
-    );
+    angle =
+        Math.max(
+            15,
+            Math.min(80, angle)
+        );
 
 
-    // 화면 경계
-    player.x = Math.max(
-        25,
-        Math.min(
-            canvas.width - 450,
-            player.x
-        )
-    );
+    player.x =
+        Math.max(
+            25,
+            Math.min(
+                canvas.width - 430,
+                player.x
+            )
+        );
 
 
-    // ==============================================
-    // 쓰레기통과의 접근 금지 거리
-    // ==============================================
+    /*
+       쓰레기통 접근 제한
+    */
 
     const playerCenter =
-        player.x + player.width / 2;
+        player.x +
+        player.width / 2;
 
     const binCenter =
-        bin.x + bin.width / 2;
+        bin.x +
+        bin.width / 2;
 
     const distance =
-        Math.abs(binCenter - playerCenter);
+        Math.abs(
+            binCenter -
+            playerCenter
+        );
 
-    const minimumDistance =
-        getLevelSettings().forbidden;
 
+    if (
+        distance <
+        forbiddenDistance
+    ) {
 
-    if (distance < minimumDistance) {
-
-        if (playerCenter < binCenter) {
+        if (
+            playerCenter <
+            binCenter
+        ) {
 
             player.x =
-                binCenter
-                - minimumDistance
-                - player.width / 2;
+                binCenter -
+                forbiddenDistance -
+                player.width / 2;
 
         } else {
 
             player.x =
-                binCenter
-                + minimumDistance
-                - player.width / 2;
+                binCenter +
+                forbiddenDistance -
+                player.width / 2;
 
         }
 
     }
 
-    document.getElementById("angle").textContent =
-        Math.round(angle);
-
 }
 
 
-// ==================================================
-// 쓰레기 던지기
-// ==================================================
+/* =========================
+   THROW
+========================= */
 
 function throwTrash() {
 
+    initAudio();
+
     const radians =
-        angle * Math.PI / 180;
+        angle *
+        Math.PI / 180;
+
 
     const speed =
-        11 + Math.min(level * 0.3, 5);
+        11 +
+        Math.min(
+            level * 0.3,
+            5
+        );
 
 
     projectile = {
 
         x:
-            player.x + 55,
+            player.x + 50,
 
         y:
-            player.y - 45,
+            player.y - 20,
 
         vx:
-            Math.cos(radians) * speed,
+            Math.cos(radians)
+            * speed,
 
         vy:
-            -Math.sin(radians) * speed,
+            -Math.sin(radians)
+            * speed,
 
-        radius: 14,
+        radius: 13,
 
         rotation: 0
 
@@ -436,83 +622,92 @@ function throwTrash() {
 }
 
 
-// ==================================================
-// 투사체 업데이트
-// ==================================================
+/* =========================
+   PROJECTILE
+========================= */
 
 function updateProjectile() {
 
-    if (projectile === null) {
-        return;
-    }
+    if (!projectile) return;
+
 
     const settings =
         getLevelSettings();
 
 
-    // 바람
-    projectile.vx += settings.wind;
+    projectile.vx += wind;
 
+    projectile.x +=
+        projectile.vx;
 
-    // 위치
-    projectile.x += projectile.vx;
+    projectile.y +=
+        projectile.vy;
 
-    projectile.y += projectile.vy;
+    projectile.vy +=
+        settings.gravity;
 
-
-    // 중력
-    projectile.vy += settings.gravity;
-
-
-    // 회전
     projectile.rotation += 0.25;
 
 
-    // ==============================================
-    // 쓰레기통 충돌
-    // ==============================================
+    /*
+       쓰레기통 충돌
+    */
 
     const insideX =
         projectile.x >
-        bin.x + 5 &&
+        bin.x - 3 &&
         projectile.x <
-        bin.x + bin.width - 5;
+        bin.x +
+        bin.width + 3;
+
 
     const insideY =
         projectile.y >
-        bin.y - 5 &&
+        bin.y - 10 &&
         projectile.y <
-        bin.y + 35;
+        bin.y + 30;
 
 
-    if (insideX && insideY) {
+    if (
+        insideX &&
+        insideY
+    ) {
 
         success();
 
         projectile = null;
 
         return;
+
     }
 
 
-    // ==============================================
-    // 바닥
-    // ==============================================
+    /*
+       땅에 떨어짐
+    */
 
-    if (projectile.y > 455) {
+    if (
+        projectile.y >
+        390
+    ) {
 
         fail();
 
         projectile = null;
 
         return;
+
     }
 
 
-    // 화면 밖
+    /*
+       화면 밖
+    */
+
     if (
         projectile.x < -100 ||
-        projectile.x > canvas.width + 100 ||
+        projectile.x >
+            canvas.width + 100 ||
         projectile.y < -100
     ) {
 
@@ -525,9 +720,9 @@ function updateProjectile() {
 }
 
 
-// ==================================================
-// 성공
-// ==================================================
+/* =========================
+   SUCCESS
+========================= */
 
 function success() {
 
@@ -538,50 +733,60 @@ function success() {
         100 * level;
 
 
-    // 콤보 보너스
     if (combo >= 2) {
-        earned += combo * 30;
+
+        earned +=
+            combo * 30;
+
     }
 
 
     score += earned;
 
 
-    document.getElementById("score")
-        .textContent = score;
+    document.getElementById(
+        "score"
+    ).textContent = score;
 
-    document.getElementById("combo")
-        .textContent = combo;
+
+    document.getElementById(
+        "combo"
+    ).textContent = combo;
+
+
+    successSound();
 
 
     showMessage(
-        "🎯 PERFECT! +" + earned
+        "🎯 PERFECT! +" +
+        earned
     );
 
 
     createParticles(
-        bin.x + bin.width / 2,
+        bin.x +
+        bin.width / 2,
+
         bin.y
     );
 
 
-    // 다음 레벨
     level++;
 
 
-    document.getElementById("level")
-        .textContent = level;
+    document.getElementById(
+        "level"
+    ).textContent = level;
 
 
-    // 새로운 쓰레기통
     newBin();
 
 }
 
 
-// ==================================================
-// 실패
-// ==================================================
+/* =========================
+   FAIL
+========================= */
 
 function fail() {
 
@@ -590,25 +795,55 @@ function fail() {
     life--;
 
 
-    document.getElementById("combo")
-        .textContent = combo;
+    document.getElementById(
+        "combo"
+    ).textContent = combo;
 
 
     updateLife();
+
+
+    /*
+       실패 소리
+    */
+
+    missSound();
+
+
+    /*
+       목숨 감소 소리
+    */
+
+    setTimeout(() => {
+
+        lifeLostSound();
+
+    }, 150);
 
 
     if (life <= 0) {
 
         gameOver = true;
 
+
+        setTimeout(() => {
+
+            gameOverSound();
+
+        }, 350);
+
+
         showMessage(
-            "💀 GAME OVER<br>R을 눌러 다시 시작"
+            "💀 GAME OVER<br>" +
+            "R을 눌러 다시 시작"
         );
+
 
     } else {
 
         showMessage(
-            "💨 MISS!"
+            "💨 MISS!<br>" +
+            "❤️ 목숨 -1"
         );
 
     }
@@ -616,104 +851,44 @@ function fail() {
 }
 
 
-// ==================================================
-// 목숨 표시
-// ==================================================
+/* =========================
+   LIFE
+========================= */
 
 function updateLife() {
 
-    let text = "";
+    let hearts = "";
 
-    for (let i = 0; i < 3; i++) {
+    for (
+        let i = 0;
+        i < life;
+        i++
+    ) {
 
-        if (i < life) {
-            text += "❤️";
-        } else {
-            text += "🖤";
-        }
+        hearts += "❤️ ";
 
     }
 
-    document.getElementById("life")
-        .textContent = text;
+
+    document.getElementById(
+        "life"
+    ).textContent =
+        hearts.trim();
 
 }
 
 
-// ==================================================
-// 새로운 쓰레기통
-// ==================================================
-
-function newBin() {
-
-    const settings =
-        getLevelSettings();
-
-
-    bin.width =
-        settings.binSize;
-
-    bin.height =
-        settings.binSize * 1.25;
-
-
-    // 플레이어가 접근할 수 없는 거리 유지
-    const minimumX =
-        player.x
-        + settings.forbidden;
-
-
-    bin.x =
-        Math.max(
-            minimumX,
-            570 + Math.random() * 250
-        );
-
-
-    // 화면 밖 방지
-    bin.x =
-        Math.min(
-            canvas.width - bin.width - 20,
-            bin.x
-        );
-
-
-    bin.y =
-        350 + Math.random() * 20;
-
-}
-
-
-// ==================================================
-// 메시지
-// ==================================================
-
-function showMessage(text) {
-
-    message.innerHTML = text;
-
-    message.style.display = "block";
-
-
-    setTimeout(function() {
-
-        message.style.display = "none";
-
-    }, 700);
-
-}
-
-
-// ==================================================
-// 파티클
-// ==================================================
-
-let particles = [];
-
+/* =========================
+   PARTICLES
+========================= */
 
 function createParticles(x, y) {
 
-    for (let i = 0; i < 25; i++) {
+    for (
+        let i = 0;
+        i < 20;
+        i++
+    ) {
 
         particles.push({
 
@@ -722,12 +897,14 @@ function createParticles(x, y) {
             y: y,
 
             vx:
-                (Math.random() - 0.5) * 8,
+                (Math.random() - 0.5)
+                * 6,
 
             vy:
-                (Math.random() - 0.8) * 8,
+                (Math.random() - 0.5)
+                * 6,
 
-            life: 45
+            life: 1
 
         });
 
@@ -738,15 +915,15 @@ function createParticles(x, y) {
 
 function updateParticles() {
 
-    particles.forEach(function(p) {
+    particles.forEach(p => {
 
         p.x += p.vx;
 
         p.y += p.vy;
 
-        p.vy += 0.2;
+        p.vy += 0.1;
 
-        p.life--;
+        p.life -= 0.025;
 
     });
 
@@ -759,14 +936,47 @@ function updateParticles() {
 }
 
 
-// ==================================================
-// 배경
-// ==================================================
+/* =========================
+   MESSAGE
+========================= */
+
+let messageTimer = null;
+
+
+function showMessage(text) {
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+
+    message.innerHTML = text;
+
+    message.style.opacity = 1;
+
+
+    clearTimeout(messageTimer);
+
+
+    messageTimer =
+        setTimeout(() => {
+
+            message.style.opacity = 0;
+
+        }, 900);
+
+}
+
+
+/* =========================
+   DRAW
+========================= */
 
 function drawBackground() {
 
-    // 하늘
-    ctx.fillStyle = "#dcefe3";
+    ctx.fillStyle =
+        "#dff1e6";
 
     ctx.fillRect(
         0,
@@ -776,243 +986,213 @@ function drawBackground() {
     );
 
 
-    // 구름
+    /*
+       하늘
+    */
+
     ctx.fillStyle =
-        "rgba(255,255,255,0.7)";
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        130,
-        90,
-        25,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.arc(
-        165,
-        80,
-        35,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.arc(
-        205,
-        95,
-        25,
-        0,
-        Math.PI * 2
-    );
-
-    ctx.fill();
-
-
-    // 바닥
-    ctx.fillStyle = "#c7dbce";
+        "#d4ebdf";
 
     ctx.fillRect(
         0,
-        435,
+        0,
         canvas.width,
-        85
+        300
     );
 
 
-    // 바닥선
-    ctx.strokeStyle = "#9fbaa9";
+    /*
+       바닥
+    */
 
-    ctx.lineWidth = 3;
-
-    ctx.beginPath();
-
-    ctx.moveTo(0, 435);
-
-    ctx.lineTo(
-        canvas.width,
-        435
-    );
-
-    ctx.stroke();
-
-}
-
-
-// ==================================================
-// 접근 금지 구역
-// ==================================================
-
-function drawForbiddenZone() {
-
-    const settings =
-        getLevelSettings();
-
-
-    const binCenter =
-        bin.x + bin.width / 2;
-
-
-    const left =
-        binCenter -
-        settings.forbidden;
-
-
-    ctx.strokeStyle =
-        "rgba(210,70,70,0.65)";
-
-    ctx.lineWidth = 3;
-
-    ctx.setLineDash([8, 8]);
-
-
-    ctx.beginPath();
-
-    ctx.arc(
-        binCenter,
-        435,
-        settings.forbidden,
-        Math.PI,
-        Math.PI * 2
-    );
-
-    ctx.stroke();
-
-
-    ctx.setLineDash([]);
-
-
-    // 영역 설명
     ctx.fillStyle =
-        "rgba(170,60,60,0.75)";
-
-    ctx.font = "12px Arial";
-
-    ctx.textAlign = "center";
-
-    ctx.fillText(
-        "APPROACH LIMIT",
-        left + settings.forbidden,
-        405
-    );
-
-}
-
-
-// ==================================================
-// 플레이어
-// ==================================================
-
-function drawPlayer() {
-
-    // 몸
-    ctx.fillStyle = "#4d8064";
+        "#a9d1b9";
 
     ctx.fillRect(
-        player.x,
-        player.y - 55,
-        player.width,
+        0,
+        375,
+        canvas.width,
         55
     );
 
 
-    // 머리
-    ctx.fillStyle = "#f1c5a0";
+    /*
+       접근 제한 영역
+    */
+
+    const centerX =
+        bin.x +
+        bin.width / 2;
+
 
     ctx.beginPath();
 
     ctx.arc(
-        player.x + 22,
-        player.y - 73,
-        18,
+        centerX,
+        bin.y +
+        bin.height / 2,
+
+        forbiddenDistance,
+
+        Math.PI,
+        Math.PI * 2
+    );
+
+
+    ctx.strokeStyle =
+        "rgba(220,70,70,0.65)";
+
+    ctx.lineWidth = 2;
+
+    ctx.setLineDash([8, 8]);
+
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+
+    /*
+       안내
+    */
+
+    ctx.fillStyle =
+        "#b24b4b";
+
+    ctx.font =
+        "13px Arial";
+
+    ctx.fillText(
+        "APPROACH LIMIT",
+        centerX - 48,
+        bin.y +
+        bin.height / 2 -
+        forbiddenDistance -
+        8
+    );
+
+}
+
+
+function drawPlayer() {
+
+    /*
+       몸
+    */
+
+    ctx.fillStyle =
+        "#245c45";
+
+    ctx.fillRect(
+        player.x,
+        player.y,
+        player.width,
+        player.height
+    );
+
+
+    /*
+       머리
+    */
+
+    ctx.beginPath();
+
+    ctx.arc(
+        player.x + 21,
+        player.y - 8,
+        17,
         0,
         Math.PI * 2
     );
 
+    ctx.fillStyle =
+        "#f1c7a5";
+
     ctx.fill();
 
 
-    // 모자
-    ctx.fillStyle = "#245c45";
+    /*
+       팔
+    */
 
-    ctx.fillRect(
-        player.x + 3,
-        player.y - 92,
-        38,
-        8
-    );
+    ctx.strokeStyle =
+        "#245c45";
 
-
-    // 팔
-    ctx.strokeStyle = "#f1c5a0";
-
-    ctx.lineWidth = 9;
+    ctx.lineWidth = 7;
 
     ctx.beginPath();
 
     ctx.moveTo(
         player.x + 38,
-        player.y - 40
+        player.y + 20
     );
 
     ctx.lineTo(
-        player.x + 57,
-        player.y - 55
+        player.x + 60,
+        player.y + 3
     );
 
     ctx.stroke();
 
 
-    // 조준선
+    /*
+       던지는 방향
+    */
+
     const radians =
-        angle * Math.PI / 180;
+        angle *
+        Math.PI / 180;
 
 
     ctx.strokeStyle =
-        "rgba(36,92,69,0.4)";
+        "rgba(36,92,69,0.45)";
 
-    ctx.lineWidth = 3;
-
-    ctx.setLineDash([7, 7]);
-
+    ctx.lineWidth = 2;
 
     ctx.beginPath();
 
     ctx.moveTo(
-        player.x + 40,
-        player.y - 50
+        player.x + 52,
+        player.y
     );
-
 
     ctx.lineTo(
-
         player.x +
-        40 +
-        Math.cos(radians) * 100,
+        52 +
+        Math.cos(radians) * 65,
 
         player.y -
-        50 -
-        Math.sin(radians) * 100
-
+        Math.sin(radians) * 65
     );
-
 
     ctx.stroke();
 
-    ctx.setLineDash([]);
+
+    ctx.fillStyle =
+        "#245c45";
+
+    ctx.font =
+        "14px Arial";
+
+    ctx.fillText(
+        "ANGLE " +
+        Math.round(angle) +
+        "°",
+
+        player.x - 3,
+        player.y + 82
+    );
 
 }
 
 
-// ==================================================
-// 쓰레기통
-// ==================================================
-
 function drawBin() {
 
-    // 몸체
-    ctx.fillStyle = "#58656d";
+    /*
+       몸체
+    */
+
+    ctx.fillStyle =
+        "#727b75";
 
     ctx.fillRect(
         bin.x,
@@ -1022,114 +1202,127 @@ function drawBin() {
     );
 
 
-    // 뚜껑
-    ctx.fillStyle = "#3f494f";
+    /*
+       테두리
+    */
+
+    ctx.strokeStyle =
+        "#4d5550";
+
+    ctx.lineWidth = 3;
+
+    ctx.strokeRect(
+        bin.x,
+        bin.y,
+        bin.width,
+        bin.height
+    );
+
+
+    /*
+       뚜껑
+    */
+
+    ctx.fillStyle =
+        "#59615c";
 
     ctx.fillRect(
         bin.x - 5,
-        bin.y - 9,
+        bin.y - 8,
         bin.width + 10,
-        12
+        10
     );
 
 
-    // 손잡이
-    ctx.strokeStyle = "#3f494f";
+    /*
+       입구
+    */
 
-    ctx.lineWidth = 7;
+    ctx.fillStyle =
+        "#202622";
 
-    ctx.beginPath();
-
-    ctx.arc(
-        bin.x + bin.width / 2,
-        bin.y - 7,
-        17,
-        Math.PI,
-        0
+    ctx.fillRect(
+        bin.x + 7,
+        bin.y + 5,
+        bin.width - 14,
+        17
     );
 
-    ctx.stroke();
 
+    /*
+       쓰레기통 표시
+    */
 
-    // 재활용 표시
-    ctx.fillStyle = "white";
+    ctx.fillStyle =
+        "#e5eee8";
 
     ctx.font =
-        Math.max(
-            22,
-            bin.width * 0.4
-        ) + "px Arial";
+        "bold 20px Arial";
 
-    ctx.textAlign = "center";
+    ctx.textAlign =
+        "center";
 
     ctx.fillText(
         "♻",
-        bin.x + bin.width / 2,
-        bin.y + bin.height * 0.65
+        bin.x +
+        bin.width / 2,
+
+        bin.y +
+        bin.height / 2 +
+        8
     );
+
+    ctx.textAlign =
+        "left";
 
 }
 
-
-// ==================================================
-// 대기 중 쓰레기
-// ==================================================
-
-function drawTrash() {
-
-    if (projectile !== null) {
-        return;
-    }
-
-
-    ctx.font = "30px Arial";
-
-    ctx.textAlign = "center";
-
-
-    ctx.fillText(
-        "🥤",
-        player.x + 58,
-        player.y - 38
-    );
-
-}
-
-
-// ==================================================
-// 날아가는 쓰레기
-// ==================================================
 
 function drawProjectile() {
 
-    if (projectile === null) {
-        return;
-    }
+    if (!projectile) return;
 
 
     ctx.save();
-
 
     ctx.translate(
         projectile.x,
         projectile.y
     );
 
-
     ctx.rotate(
         projectile.rotation
     );
 
 
-    ctx.font = "30px Arial";
+    /*
+       쓰레기 봉투
+    */
 
-    ctx.textAlign = "center";
+    ctx.fillStyle =
+        "#777";
 
+    ctx.beginPath();
 
-    ctx.fillText(
-        "🥤",
+    ctx.arc(
         0,
-        0
+        0,
+        projectile.radius,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+
+
+    ctx.fillStyle =
+        "#444";
+
+    ctx.fillRect(
+        -7,
+        -5,
+        14,
+        3
     );
 
 
@@ -1138,42 +1331,67 @@ function drawProjectile() {
 }
 
 
-// ==================================================
-// 파티클
-// ==================================================
-
 function drawParticles() {
 
-    particles.forEach(function(p) {
+    particles.forEach(p => {
+
+        ctx.globalAlpha =
+            p.life;
 
         ctx.fillStyle =
-            "rgba(46,125,80," +
-            (p.life / 45) +
-            ")";
+            "#2f8f62";
 
-
-        ctx.beginPath();
-
-        ctx.arc(
+        ctx.fillRect(
             p.x,
             p.y,
-            4,
-            0,
-            Math.PI * 2
+            5,
+            5
         );
 
-        ctx.fill();
-
     });
+
+
+    ctx.globalAlpha = 1;
 
 }
 
 
-// ==================================================
-// 게임 루프
-// ==================================================
+/* =========================
+   WIND DISPLAY
+========================= */
 
-function update() {
+function drawWind() {
+
+    if (!projectile) return;
+
+
+    ctx.fillStyle =
+        "#61776c";
+
+    ctx.font =
+        "13px Arial";
+
+
+    let windText =
+        wind > 0
+        ? "→ WIND"
+        : "← WIND";
+
+
+    ctx.fillText(
+        windText,
+        20,
+        25
+    );
+
+}
+
+
+/* =========================
+   GAME LOOP
+========================= */
+
+function gameLoop() {
 
     if (!gameOver) {
 
@@ -1183,35 +1401,22 @@ function update() {
 
     }
 
+
     updateParticles();
 
-}
-
-
-function draw() {
 
     drawBackground();
-
-    drawForbiddenZone();
 
     drawBin();
 
     drawPlayer();
 
-    drawTrash();
-
     drawProjectile();
 
     drawParticles();
 
-}
+    drawWind();
 
-
-function gameLoop() {
-
-    update();
-
-    draw();
 
     requestAnimationFrame(
         gameLoop
@@ -1220,9 +1425,92 @@ function gameLoop() {
 }
 
 
-// ==================================================
-// 재시작
-// ==================================================
+/* =========================
+   KEYBOARD
+========================= */
+
+window.addEventListener(
+    "keydown",
+    function(e) {
+
+        initAudio();
+
+
+        if (
+            e.key === "ArrowLeft" ||
+            e.key === "ArrowRight" ||
+            e.key === "ArrowUp" ||
+            e.key === "ArrowDown" ||
+            e.code === "Space"
+        ) {
+
+            e.preventDefault();
+
+        }
+
+
+        keys[e.key] = true;
+
+
+        if (
+            e.code === "Space"
+        ) {
+
+            if (
+                !gameOver &&
+                projectile === null
+            ) {
+
+                throwTrash();
+
+            }
+
+        }
+
+
+        if (
+            (e.key === "r" ||
+             e.key === "R") &&
+            gameOver
+        ) {
+
+            restart();
+
+        }
+
+    }
+);
+
+
+window.addEventListener(
+    "keyup",
+    function(e) {
+
+        keys[e.key] = false;
+
+    }
+);
+
+
+/*
+   Canvas를 클릭하면 키보드 입력 활성화
+*/
+
+canvas.addEventListener(
+    "click",
+    function() {
+
+        canvas.focus();
+
+        initAudio();
+
+    }
+);
+
+
+/* =========================
+   RESTART
+========================= */
 
 function restart() {
 
@@ -1242,18 +1530,22 @@ function restart() {
 
     particles = [];
 
+    player.x = 90;
 
-    player.x = 100;
+
+    document.getElementById(
+        "level"
+    ).textContent = level;
 
 
-    document.getElementById("level")
-        .textContent = level;
+    document.getElementById(
+        "score"
+    ).textContent = score;
 
-    document.getElementById("score")
-        .textContent = score;
 
-    document.getElementById("combo")
-        .textContent = combo;
+    document.getElementById(
+        "combo"
+    ).textContent = combo;
 
 
     updateLife();
@@ -1263,9 +1555,9 @@ function restart() {
 }
 
 
-// ==================================================
-// 시작
-// ==================================================
+/* =========================
+   START
+========================= */
 
 newBin();
 
@@ -1273,14 +1565,17 @@ updateLife();
 
 gameLoop();
 
+canvas.focus();
+
 </script>
 
 </body>
 </html>
 """
 
+
 components.html(
     game_html,
-    height=680,
+    height=650,
     scrolling=False
 )
