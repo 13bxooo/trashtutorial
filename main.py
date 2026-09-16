@@ -2,58 +2,52 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="쓰레기통 골인 게임",
+    page_title="Trash Shot",
     page_icon="🗑️",
     layout="centered"
 )
 
 st.markdown("""
 <style>
-    .stApp {
-        background: #f4f8f5;
-    }
+.stApp {
+    background: #eef5f0;
+}
 
-    .title {
-        text-align: center;
-        color: #245c45;
-        font-size: 38px;
-        font-weight: 800;
-        margin-top: 20px;
-        margin-bottom: 5px;
-    }
+.title {
+    text-align: center;
+    color: #245c45;
+    font-size: 40px;
+    font-weight: 800;
+    margin-top: 15px;
+}
 
-    .subtitle {
-        text-align: center;
-        color: #718078;
-        margin-bottom: 20px;
-    }
+.subtitle {
+    text-align: center;
+    color: #718078;
+    margin-bottom: 15px;
+}
 
-    iframe {
-        border-radius: 20px;
-    }
+iframe {
+    border-radius: 20px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown(
-    '<div class="title">🗑️ 쓰레기통 골인!</div>',
+    '<div class="title">🗑️ TRASH SHOT</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="subtitle">화살표 키로 움직이고 쓰레기를 던져보세요!</div>',
+    '<div class="subtitle">화살표 키로 움직이고, 정확하게 쓰레기를 던져보세요.</div>',
     unsafe_allow_html=True
 )
 
 
-# --------------------------------------------------
-# 게임
-# --------------------------------------------------
-
-game_html = """
+game_html = r"""
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
 
 <style>
@@ -71,89 +65,104 @@ body {
 
 #game {
     width: 100%;
-    max-width: 850px;
+    max-width: 900px;
     margin: auto;
 }
 
 canvas {
     width: 100%;
-    height: auto;
     display: block;
     border-radius: 20px;
-    background: #dff3e6;
-    border: 2px solid #c9e4d3;
+    background: #dcefe3;
+    border: 2px solid #c5dfcf;
+    outline: none;
 }
 
-.info {
+.stats {
     display: flex;
-    justify-content: space-between;
-    margin-top: 12px;
-    gap: 10px;
+    gap: 8px;
+    margin-top: 10px;
 }
 
-.box {
+.stat {
     flex: 1;
     background: white;
     border-radius: 12px;
-    padding: 10px;
     text-align: center;
+    padding: 9px 4px;
     color: #245c45;
     font-weight: bold;
+    font-size: 14px;
+}
+
+.stat span {
+    font-size: 20px;
 }
 
 .help {
-    margin-top: 12px;
-    padding: 12px;
+    margin-top: 10px;
     background: white;
     border-radius: 12px;
+    padding: 11px;
     text-align: center;
-    color: #66756d;
-    font-size: 14px;
+    color: #65746c;
+    font-size: 13px;
 }
 
 #message {
     position: fixed;
     left: 50%;
-    top: 45%;
+    top: 42%;
     transform: translate(-50%, -50%);
-    font-size: 40px;
-    font-weight: bold;
+    font-size: 38px;
+    font-weight: 900;
     color: #245c45;
     pointer-events: none;
     display: none;
+    text-align: center;
+    white-space: nowrap;
 }
 
 </style>
-
 </head>
 
 <body>
 
 <div id="game">
 
-    <canvas id="canvas" width="850" height="500"></canvas>
+    <canvas
+        id="canvas"
+        width="900"
+        height="520"
+        tabindex="0">
+    </canvas>
 
-    <div class="info">
+    <div class="stats">
 
-        <div class="box">
-            점수<br>
+        <div class="stat">
+            LEVEL<br>
+            <span id="level">1</span>
+        </div>
+
+        <div class="stat">
+            SCORE<br>
             <span id="score">0</span>
         </div>
 
-        <div class="box">
-            남은 시간<br>
-            <span id="time">30</span>초
+        <div class="stat">
+            LIFE<br>
+            <span id="life">❤️❤️❤️</span>
         </div>
 
-        <div class="box">
-            각도<br>
-            <span id="angle">45</span>°
+        <div class="stat">
+            COMBO<br>
+            <span id="combo">0</span>
         </div>
 
     </div>
 
     <div class="help">
-        ← → 이동　│　↑ ↓ 조준　│　SPACE 던지기　│　R 다시 시작
+        ← → 이동　│　↑ ↓ 각도　│　SPACE 던지기　│　R 재시작
     </div>
 
 </div>
@@ -166,53 +175,105 @@ canvas {
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-const scoreText = document.getElementById("score");
-const timeText = document.getElementById("time");
-const angleText = document.getElementById("angle");
-const message = document.getElementById("message");
+canvas.focus();
 
 
-// --------------------------------------------------
-// 게임 변수
-// --------------------------------------------------
+// ==================================================
+// 기본 게임 상태
+// ==================================================
 
+let level = 1;
 let score = 0;
-let timeLeft = 30;
+let life = 3;
+let combo = 0;
+
 let gameOver = false;
 
 let keys = {};
 
 let angle = 45;
 
+
+// ==================================================
+// 플레이어
+// ==================================================
+
 let player = {
     x: 100,
-    y: 410,
+    y: 425,
     width: 45,
     height: 65,
     speed: 6
 };
 
-let trash = {
-    x: 115,
-    y: 380,
-    radius: 13
-};
 
-let bin = {
-    x: 680,
-    y: 360,
-    width: 75,
-    height: 90
-};
+// ==================================================
+// 쓰레기
+// ==================================================
 
 let projectile = null;
 
-let particles = [];
+
+// ==================================================
+// 쓰레기통
+// ==================================================
+
+let bin = {
+    x: 700,
+    y: 365,
+    width: 80,
+    height: 100
+};
 
 
-// --------------------------------------------------
-// 키보드
-// --------------------------------------------------
+// 접근 금지 거리
+let forbiddenDistance = 220;
+
+
+// ==================================================
+// 레벨별 설정
+// ==================================================
+
+function getLevelSettings() {
+
+    return {
+
+        // 레벨이 올라갈수록 중력 증가
+        gravity:
+            0.28 + (level - 1) * 0.045,
+
+        // 레벨이 올라갈수록 바람 증가
+        wind:
+            (Math.random() - 0.5)
+            * (0.10 + level * 0.045),
+
+        // 쓰레기통 크기 감소
+        binSize:
+            Math.max(
+                48,
+                80 - (level - 1) * 4
+            ),
+
+        // 접근 금지 거리 증가
+        forbidden:
+            Math.min(
+                300,
+                220 + (level - 1) * 8
+            ),
+
+        // 목표 정확도
+        tolerance:
+            Math.max(
+                8,
+                22 - (level - 1) * 1.2
+            )
+    };
+}
+
+
+// ==================================================
+// 키 입력
+// ==================================================
 
 document.addEventListener("keydown", function(e) {
 
@@ -230,7 +291,10 @@ document.addEventListener("keydown", function(e) {
 
     if (e.code === "Space") {
 
-        if (!gameOver && projectile === null) {
+        if (
+            !gameOver &&
+            projectile === null
+        ) {
             throwTrash();
         }
 
@@ -247,30 +311,123 @@ document.addEventListener("keydown", function(e) {
 
 
 document.addEventListener("keyup", function(e) {
+
     keys[e.key] = false;
+
 });
 
 
-// --------------------------------------------------
+// ==================================================
+// 플레이어 이동
+// ==================================================
+
+function updatePlayer() {
+
+    if (keys["ArrowLeft"]) {
+        player.x -= player.speed;
+    }
+
+    if (keys["ArrowRight"]) {
+        player.x += player.speed;
+    }
+
+    if (keys["ArrowUp"]) {
+        angle += 0.8;
+    }
+
+    if (keys["ArrowDown"]) {
+        angle -= 0.8;
+    }
+
+
+    // 각도 제한
+    angle = Math.max(
+        15,
+        Math.min(80, angle)
+    );
+
+
+    // 화면 경계
+    player.x = Math.max(
+        25,
+        Math.min(
+            canvas.width - 450,
+            player.x
+        )
+    );
+
+
+    // ==============================================
+    // 쓰레기통과의 접근 금지 거리
+    // ==============================================
+
+    const playerCenter =
+        player.x + player.width / 2;
+
+    const binCenter =
+        bin.x + bin.width / 2;
+
+    const distance =
+        Math.abs(binCenter - playerCenter);
+
+    const minimumDistance =
+        getLevelSettings().forbidden;
+
+
+    if (distance < minimumDistance) {
+
+        if (playerCenter < binCenter) {
+
+            player.x =
+                binCenter
+                - minimumDistance
+                - player.width / 2;
+
+        } else {
+
+            player.x =
+                binCenter
+                + minimumDistance
+                - player.width / 2;
+
+        }
+
+    }
+
+    document.getElementById("angle").textContent =
+        Math.round(angle);
+
+}
+
+
+// ==================================================
 // 쓰레기 던지기
-// --------------------------------------------------
+// ==================================================
 
 function throwTrash() {
 
-    const radians = angle * Math.PI / 180;
+    const radians =
+        angle * Math.PI / 180;
 
-    const speed = 13;
+    const speed =
+        11 + Math.min(level * 0.3, 5);
+
 
     projectile = {
 
-        x: player.x + 35,
-        y: player.y - 35,
+        x:
+            player.x + 55,
 
-        vx: Math.cos(radians) * speed,
+        y:
+            player.y - 45,
 
-        vy: -Math.sin(radians) * speed,
+        vx:
+            Math.cos(radians) * speed,
 
-        radius: 13,
+        vy:
+            -Math.sin(radians) * speed,
+
+        radius: 14,
 
         rotation: 0
 
@@ -279,64 +436,9 @@ function throwTrash() {
 }
 
 
-// --------------------------------------------------
-// 쓰레기통 위치 변경
-// --------------------------------------------------
-
-function moveBin() {
-
-    bin.x = 560 + Math.random() * 220;
-
-    bin.y = 350 + Math.random() * 30;
-
-}
-
-
-// --------------------------------------------------
-// 플레이어
-// --------------------------------------------------
-
-function updatePlayer() {
-
-    if (keys["ArrowLeft"]) {
-
-        player.x -= player.speed;
-
-    }
-
-    if (keys["ArrowRight"]) {
-
-        player.x += player.speed;
-
-    }
-
-    if (keys["ArrowUp"]) {
-
-        angle += 1;
-
-    }
-
-    if (keys["ArrowDown"]) {
-
-        angle -= 1;
-
-    }
-
-    angle = Math.max(15, Math.min(75, angle));
-
-    player.x = Math.max(
-        20,
-        Math.min(430, player.x)
-    );
-
-    angleText.textContent = Math.round(angle);
-
-}
-
-
-// --------------------------------------------------
-// 투사체
-// --------------------------------------------------
+// ==================================================
+// 투사체 업데이트
+// ==================================================
 
 function updateProjectile() {
 
@@ -344,27 +446,43 @@ function updateProjectile() {
         return;
     }
 
+    const settings =
+        getLevelSettings();
+
+
+    // 바람
+    projectile.vx += settings.wind;
+
+
+    // 위치
     projectile.x += projectile.vx;
 
     projectile.y += projectile.vy;
 
-    projectile.vy += 0.35;
 
-    projectile.rotation += 0.2;
+    // 중력
+    projectile.vy += settings.gravity;
 
 
+    // 회전
+    projectile.rotation += 0.25;
+
+
+    // ==============================================
     // 쓰레기통 충돌
+    // ==============================================
+
     const insideX =
         projectile.x >
-        bin.x - 5 &&
+        bin.x + 5 &&
         projectile.x <
-        bin.x + bin.width + 5;
+        bin.x + bin.width - 5;
 
     const insideY =
         projectile.y >
         bin.y - 5 &&
         projectile.y <
-        bin.y + bin.height;
+        bin.y + 35;
 
 
     if (insideX && insideY) {
@@ -377,8 +495,13 @@ function updateProjectile() {
     }
 
 
-    // 바닥에 떨어짐
-    if (projectile.y > 460) {
+    // ==============================================
+    // 바닥
+    // ==============================================
+
+    if (projectile.y > 455) {
+
+        fail();
 
         projectile = null;
 
@@ -388,10 +511,12 @@ function updateProjectile() {
 
     // 화면 밖
     if (
-        projectile.x > canvas.width + 50 ||
-        projectile.x < -50 ||
+        projectile.x < -100 ||
+        projectile.x > canvas.width + 100 ||
         projectile.y < -100
     ) {
+
+        fail();
 
         projectile = null;
 
@@ -400,37 +525,175 @@ function updateProjectile() {
 }
 
 
-// --------------------------------------------------
+// ==================================================
 // 성공
-// --------------------------------------------------
+// ==================================================
 
 function success() {
 
-    score += 100;
+    combo++;
 
-    scoreText.textContent = score;
 
-    showMessage("🎯 GOAL! +100");
+    let earned =
+        100 * level;
+
+
+    // 콤보 보너스
+    if (combo >= 2) {
+        earned += combo * 30;
+    }
+
+
+    score += earned;
+
+
+    document.getElementById("score")
+        .textContent = score;
+
+    document.getElementById("combo")
+        .textContent = combo;
+
+
+    showMessage(
+        "🎯 PERFECT! +" + earned
+    );
+
 
     createParticles(
         bin.x + bin.width / 2,
         bin.y
     );
 
-    moveBin();
+
+    // 다음 레벨
+    level++;
+
+
+    document.getElementById("level")
+        .textContent = level;
+
+
+    // 새로운 쓰레기통
+    newBin();
 
 }
 
 
-// --------------------------------------------------
+// ==================================================
+// 실패
+// ==================================================
+
+function fail() {
+
+    combo = 0;
+
+    life--;
+
+
+    document.getElementById("combo")
+        .textContent = combo;
+
+
+    updateLife();
+
+
+    if (life <= 0) {
+
+        gameOver = true;
+
+        showMessage(
+            "💀 GAME OVER<br>R을 눌러 다시 시작"
+        );
+
+    } else {
+
+        showMessage(
+            "💨 MISS!"
+        );
+
+    }
+
+}
+
+
+// ==================================================
+// 목숨 표시
+// ==================================================
+
+function updateLife() {
+
+    let text = "";
+
+    for (let i = 0; i < 3; i++) {
+
+        if (i < life) {
+            text += "❤️";
+        } else {
+            text += "🖤";
+        }
+
+    }
+
+    document.getElementById("life")
+        .textContent = text;
+
+}
+
+
+// ==================================================
+// 새로운 쓰레기통
+// ==================================================
+
+function newBin() {
+
+    const settings =
+        getLevelSettings();
+
+
+    bin.width =
+        settings.binSize;
+
+    bin.height =
+        settings.binSize * 1.25;
+
+
+    // 플레이어가 접근할 수 없는 거리 유지
+    const minimumX =
+        player.x
+        + settings.forbidden;
+
+
+    bin.x =
+        Math.max(
+            minimumX,
+            570 + Math.random() * 250
+        );
+
+
+    // 화면 밖 방지
+    bin.x =
+        Math.min(
+            canvas.width - bin.width - 20,
+            bin.x
+        );
+
+
+    bin.y =
+        350 + Math.random() * 20;
+
+}
+
+
+// ==================================================
 // 메시지
-// --------------------------------------------------
+// ==================================================
 
 function showMessage(text) {
 
-    message.textContent = text;
+    message.innerHTML = text;
 
     message.style.display = "block";
+
 
     setTimeout(function() {
 
@@ -441,24 +704,30 @@ function showMessage(text) {
 }
 
 
-// --------------------------------------------------
+// ==================================================
 // 파티클
-// --------------------------------------------------
+// ==================================================
+
+let particles = [];
+
 
 function createParticles(x, y) {
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 25; i++) {
 
         particles.push({
 
             x: x,
+
             y: y,
 
-            vx: (Math.random() - 0.5) * 7,
+            vx:
+                (Math.random() - 0.5) * 8,
 
-            vy: (Math.random() - 0.8) * 7,
+            vy:
+                (Math.random() - 0.8) * 8,
 
-            life: 40
+            life: 45
 
         });
 
@@ -469,7 +738,7 @@ function createParticles(x, y) {
 
 function updateParticles() {
 
-    particles.forEach(p => {
+    particles.forEach(function(p) {
 
         p.x += p.vx;
 
@@ -481,20 +750,23 @@ function updateParticles() {
 
     });
 
+
     particles =
-        particles.filter(p => p.life > 0);
+        particles.filter(
+            p => p.life > 0
+        );
 
 }
 
 
-// --------------------------------------------------
-// 그리기
-// --------------------------------------------------
+// ==================================================
+// 배경
+// ==================================================
 
 function drawBackground() {
 
     // 하늘
-    ctx.fillStyle = "#dff3e6";
+    ctx.fillStyle = "#dcefe3";
 
     ctx.fillRect(
         0,
@@ -505,60 +777,132 @@ function drawBackground() {
 
 
     // 구름
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
-
-    ctx.beginPath();
-
-    ctx.arc(120, 90, 25, 0, Math.PI * 2);
-
-    ctx.arc(150, 80, 35, 0, Math.PI * 2);
-
-    ctx.arc(185, 95, 25, 0, Math.PI * 2);
-
-    ctx.fill();
+    ctx.fillStyle =
+        "rgba(255,255,255,0.7)";
 
 
     ctx.beginPath();
 
-    ctx.arc(500, 100, 22, 0, Math.PI * 2);
+    ctx.arc(
+        130,
+        90,
+        25,
+        0,
+        Math.PI * 2
+    );
 
-    ctx.arc(530, 90, 32, 0, Math.PI * 2);
+    ctx.arc(
+        165,
+        80,
+        35,
+        0,
+        Math.PI * 2
+    );
 
-    ctx.arc(565, 105, 22, 0, Math.PI * 2);
+    ctx.arc(
+        205,
+        95,
+        25,
+        0,
+        Math.PI * 2
+    );
 
     ctx.fill();
 
 
     // 바닥
-    ctx.fillStyle = "#cbded1";
+    ctx.fillStyle = "#c7dbce";
 
     ctx.fillRect(
         0,
-        430,
+        435,
         canvas.width,
-        70
+        85
     );
 
 
     // 바닥선
-    ctx.strokeStyle = "#aac5b4";
+    ctx.strokeStyle = "#9fbaa9";
 
     ctx.lineWidth = 3;
 
     ctx.beginPath();
 
-    ctx.moveTo(0, 430);
+    ctx.moveTo(0, 435);
 
-    ctx.lineTo(canvas.width, 430);
+    ctx.lineTo(
+        canvas.width,
+        435
+    );
 
     ctx.stroke();
 
 }
 
 
-// --------------------------------------------------
-// 플레이어 그리기
-// --------------------------------------------------
+// ==================================================
+// 접근 금지 구역
+// ==================================================
+
+function drawForbiddenZone() {
+
+    const settings =
+        getLevelSettings();
+
+
+    const binCenter =
+        bin.x + bin.width / 2;
+
+
+    const left =
+        binCenter -
+        settings.forbidden;
+
+
+    ctx.strokeStyle =
+        "rgba(210,70,70,0.65)";
+
+    ctx.lineWidth = 3;
+
+    ctx.setLineDash([8, 8]);
+
+
+    ctx.beginPath();
+
+    ctx.arc(
+        binCenter,
+        435,
+        settings.forbidden,
+        Math.PI,
+        Math.PI * 2
+    );
+
+    ctx.stroke();
+
+
+    ctx.setLineDash([]);
+
+
+    // 영역 설명
+    ctx.fillStyle =
+        "rgba(170,60,60,0.75)";
+
+    ctx.font = "12px Arial";
+
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+        "APPROACH LIMIT",
+        left + settings.forbidden,
+        405
+    );
+
+}
+
+
+// ==================================================
+// 플레이어
+// ==================================================
 
 function drawPlayer() {
 
@@ -574,13 +918,13 @@ function drawPlayer() {
 
 
     // 머리
-    ctx.fillStyle = "#f2c6a0";
+    ctx.fillStyle = "#f1c5a0";
 
     ctx.beginPath();
 
     ctx.arc(
         player.x + 22,
-        player.y - 72,
+        player.y - 73,
         18,
         0,
         Math.PI * 2
@@ -594,14 +938,14 @@ function drawPlayer() {
 
     ctx.fillRect(
         player.x + 3,
-        player.y - 91,
+        player.y - 92,
         38,
         8
     );
 
 
     // 팔
-    ctx.strokeStyle = "#f2c6a0";
+    ctx.strokeStyle = "#f1c5a0";
 
     ctx.lineWidth = 9;
 
@@ -609,12 +953,12 @@ function drawPlayer() {
 
     ctx.moveTo(
         player.x + 38,
-        player.y - 42
+        player.y - 40
     );
 
     ctx.lineTo(
         player.x + 57,
-        player.y - 58
+        player.y - 55
     );
 
     ctx.stroke();
@@ -624,12 +968,14 @@ function drawPlayer() {
     const radians =
         angle * Math.PI / 180;
 
+
     ctx.strokeStyle =
-        "rgba(36,92,69,0.35)";
+        "rgba(36,92,69,0.4)";
 
     ctx.lineWidth = 3;
 
     ctx.setLineDash([7, 7]);
+
 
     ctx.beginPath();
 
@@ -638,10 +984,19 @@ function drawPlayer() {
         player.y - 50
     );
 
+
     ctx.lineTo(
-        player.x + 40 + Math.cos(radians) * 100,
-        player.y - 50 - Math.sin(radians) * 100
+
+        player.x +
+        40 +
+        Math.cos(radians) * 100,
+
+        player.y -
+        50 -
+        Math.sin(radians) * 100
+
     );
+
 
     ctx.stroke();
 
@@ -650,14 +1005,14 @@ function drawPlayer() {
 }
 
 
-// --------------------------------------------------
-// 쓰레기통 그리기
-// --------------------------------------------------
+// ==================================================
+// 쓰레기통
+// ==================================================
 
 function drawBin() {
 
-    // 본체
-    ctx.fillStyle = "#5c6870";
+    // 몸체
+    ctx.fillStyle = "#58656d";
 
     ctx.fillRect(
         bin.x,
@@ -667,19 +1022,19 @@ function drawBin() {
     );
 
 
-    // 윗부분
-    ctx.fillStyle = "#424b51";
+    // 뚜껑
+    ctx.fillStyle = "#3f494f";
 
     ctx.fillRect(
         bin.x - 5,
-        bin.y - 10,
+        bin.y - 9,
         bin.width + 10,
-        13
+        12
     );
 
 
     // 손잡이
-    ctx.strokeStyle = "#424b51";
+    ctx.strokeStyle = "#3f494f";
 
     ctx.lineWidth = 7;
 
@@ -688,7 +1043,7 @@ function drawBin() {
     ctx.arc(
         bin.x + bin.width / 2,
         bin.y - 7,
-        18,
+        17,
         Math.PI,
         0
     );
@@ -696,25 +1051,29 @@ function drawBin() {
     ctx.stroke();
 
 
-    // 쓰레기통 표시
+    // 재활용 표시
     ctx.fillStyle = "white";
 
-    ctx.font = "30px Arial";
+    ctx.font =
+        Math.max(
+            22,
+            bin.width * 0.4
+        ) + "px Arial";
 
     ctx.textAlign = "center";
 
     ctx.fillText(
         "♻",
         bin.x + bin.width / 2,
-        bin.y + 58
+        bin.y + bin.height * 0.65
     );
 
 }
 
 
-// --------------------------------------------------
-// 현재 쓰레기 그리기
-// --------------------------------------------------
+// ==================================================
+// 대기 중 쓰레기
+// ==================================================
 
 function drawTrash() {
 
@@ -722,22 +1081,24 @@ function drawTrash() {
         return;
     }
 
-    ctx.font = "28px Arial";
+
+    ctx.font = "30px Arial";
 
     ctx.textAlign = "center";
+
 
     ctx.fillText(
         "🥤",
         player.x + 58,
-        player.y - 40
+        player.y - 38
     );
 
 }
 
 
-// --------------------------------------------------
+// ==================================================
 // 날아가는 쓰레기
-// --------------------------------------------------
+// ==================================================
 
 function drawProjectile() {
 
@@ -745,18 +1106,25 @@ function drawProjectile() {
         return;
     }
 
+
     ctx.save();
+
 
     ctx.translate(
         projectile.x,
         projectile.y
     );
 
-    ctx.rotate(projectile.rotation);
+
+    ctx.rotate(
+        projectile.rotation
+    );
+
 
     ctx.font = "30px Arial";
 
     ctx.textAlign = "center";
+
 
     ctx.fillText(
         "🥤",
@@ -764,23 +1132,25 @@ function drawProjectile() {
         0
     );
 
+
     ctx.restore();
 
 }
 
 
-// --------------------------------------------------
-// 파티클 그리기
-// --------------------------------------------------
+// ==================================================
+// 파티클
+// ==================================================
 
 function drawParticles() {
 
-    particles.forEach(p => {
+    particles.forEach(function(p) {
 
         ctx.fillStyle =
-            "rgba(46, 125, 80, " +
-            (p.life / 40) +
+            "rgba(46,125,80," +
+            (p.life / 45) +
             ")";
+
 
         ctx.beginPath();
 
@@ -799,53 +1169,9 @@ function drawParticles() {
 }
 
 
-// --------------------------------------------------
-// 게임 종료
-// --------------------------------------------------
-
-function endGame() {
-
-    gameOver = true;
-
-    showMessage(
-        "🏆 GAME OVER!  R을 눌러 다시 시작"
-    );
-
-}
-
-
-// --------------------------------------------------
-// 재시작
-// --------------------------------------------------
-
-function restart() {
-
-    score = 0;
-
-    timeLeft = 30;
-
-    gameOver = false;
-
-    angle = 45;
-
-    player.x = 100;
-
-    projectile = null;
-
-    particles = [];
-
-    moveBin();
-
-    scoreText.textContent = score;
-
-    timeText.textContent = timeLeft;
-
-}
-
-
-// --------------------------------------------------
-// 게임 업데이트
-// --------------------------------------------------
+// ==================================================
+// 게임 루프
+// ==================================================
 
 function update() {
 
@@ -862,13 +1188,11 @@ function update() {
 }
 
 
-// --------------------------------------------------
-// 게임 그리기
-// --------------------------------------------------
-
 function draw() {
 
     drawBackground();
+
+    drawForbiddenZone();
 
     drawBin();
 
@@ -883,46 +1207,69 @@ function draw() {
 }
 
 
-// --------------------------------------------------
-// 게임 루프
-// --------------------------------------------------
-
 function gameLoop() {
 
     update();
 
     draw();
 
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(
+        gameLoop
+    );
 
 }
 
 
-// --------------------------------------------------
-// 타이머
-// --------------------------------------------------
+// ==================================================
+// 재시작
+// ==================================================
 
-setInterval(function() {
+function restart() {
 
-    if (gameOver) {
-        return;
-    }
+    level = 1;
 
-    timeLeft--;
+    score = 0;
 
-    timeText.textContent = timeLeft;
+    life = 3;
 
-    if (timeLeft <= 0) {
+    combo = 0;
 
-        endGame();
+    angle = 45;
 
-    }
+    gameOver = false;
 
-}, 1000);
+    projectile = null;
+
+    particles = [];
 
 
+    player.x = 100;
+
+
+    document.getElementById("level")
+        .textContent = level;
+
+    document.getElementById("score")
+        .textContent = score;
+
+    document.getElementById("combo")
+        .textContent = combo;
+
+
+    updateLife();
+
+    newBin();
+
+}
+
+
+// ==================================================
 // 시작
-moveBin();
+// ==================================================
+
+newBin();
+
+updateLife();
 
 gameLoop();
 
@@ -934,6 +1281,6 @@ gameLoop();
 
 components.html(
     game_html,
-    height=650,
+    height=680,
     scrolling=False
 )
