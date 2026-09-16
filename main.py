@@ -1,6 +1,5 @@
 import streamlit as st
 
-
 # --------------------------------------------------
 # 페이지 설정
 # --------------------------------------------------
@@ -11,7 +10,6 @@ st.set_page_config(
     layout="centered"
 )
 
-
 # --------------------------------------------------
 # CSS
 # --------------------------------------------------
@@ -19,7 +17,7 @@ st.set_page_config(
 st.markdown("""
 <style>
     .stApp {
-        background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 55%);
+        background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 60%);
     }
 
     .main-title {
@@ -27,7 +25,7 @@ st.markdown("""
         font-size: 42px;
         font-weight: 800;
         color: #163a63;
-        margin-top: 20px;
+        margin-top: 30px;
         margin-bottom: 8px;
     }
 
@@ -42,14 +40,14 @@ st.markdown("""
         font-size: 20px;
         font-weight: 700;
         color: #163a63;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
 
     .result-card {
         background: white;
         border-radius: 20px;
-        padding: 28px;
-        margin-top: 25px;
+        padding: 30px;
+        margin-top: 30px;
         border: 1px solid #e4edf7;
         box-shadow: 0 8px 25px rgba(35, 82, 125, 0.08);
     }
@@ -58,7 +56,7 @@ st.markdown("""
         color: #4a90c2;
         font-size: 14px;
         font-weight: 700;
-        margin-bottom: 5px;
+        margin-bottom: 6px;
     }
 
     .destination {
@@ -104,7 +102,6 @@ st.markdown("""
     }
 
     div[data-testid="stButton"] button {
-        width: 100%;
         border-radius: 12px;
         height: 48px;
         font-weight: 700;
@@ -114,7 +111,7 @@ st.markdown("""
 
 
 # --------------------------------------------------
-# MBTI 여행지 데이터
+# 여행지 데이터
 # --------------------------------------------------
 
 travel_data = {
@@ -153,7 +150,7 @@ travel_data = {
     "ISTP": {
         "destination": "강릉",
         "emoji": "🌊",
-        "description": "바다와 카페, 다양한 액티비티를 자유롭게 즐길 수 있는 곳이에요.",
+        "description": "바다와 카페, 다양한 활동을 자유롭게 즐길 수 있는 곳이에요.",
         "reason": "정해진 일정에 얽매이기보다 그날의 기분에 따라 바다와 다양한 활동을 즐기는 여행에 잘 어울려요.",
         "tags": ["바다", "액티비티", "자유", "카페"]
     },
@@ -178,23 +175,23 @@ travel_data = {
         "destination": "대전",
         "emoji": "🔬",
         "description": "과학과 연구, 다양한 전시를 접할 수 있는 도시예요.",
-        "reason": "과학관이나 연구 관련 공간처럼 새로운 지식을 탐구할 수 있는 장소를 방문하는 여행과 잘 어울려요.",
+        "reason": "과학관이나 다양한 전시처럼 새로운 지식을 탐구할 수 있는 장소를 방문하는 여행과 잘 어울려요.",
         "tags": ["과학", "탐구", "전시", "도시"]
     },
 
     "ESTP": {
         "destination": "부산",
         "emoji": "🌊",
-        "description": "바다부터 맛집과 액티비티까지 다양한 경험을 즐길 수 있는 도시예요.",
+        "description": "바다부터 맛집과 다양한 활동까지 즐길 수 있는 도시예요.",
         "reason": "새로운 경험을 직접 체험하고 활기찬 분위기를 즐기고 싶다면 부산의 다양한 관광지를 추천해요.",
-        "tags": ["바다", "액티비티", "맛집", "도시"]
+        "tags": ["바다", "활동", "맛집", "도시"]
     },
 
     "ESFP": {
         "destination": "부산",
         "emoji": "🎡",
         "description": "맛집과 바다, 관광 명소를 다양하게 즐길 수 있는 활기찬 여행지예요.",
-        "reason": "친구나 가족과 함께 돌아다니며 맛있는 음식과 재미있는 경험을 많이 만들고 싶을 때 잘 어울려요.",
+        "reason": "친구나 가족과 함께 돌아다니며 맛있는 음식과 재미있는 경험을 만들고 싶을 때 잘 어울려요.",
         "tags": ["맛집", "바다", "관광", "즐거움"]
     },
 
@@ -202,7 +199,7 @@ travel_data = {
         "destination": "제주",
         "emoji": "🌴",
         "description": "새로운 장소를 발견하고 다양한 경험을 즐기기 좋은 여행지예요.",
-        "reason": "한 가지 활동에 머무르기보다 자연, 카페, 관광지 등 여러 장소를 자유롭게 돌아다니는 여행과 잘 어울려요.",
+        "reason": "자연, 카페, 관광지 등 여러 장소를 자유롭게 돌아다니는 여행과 잘 어울려요.",
         "tags": ["모험", "자연", "카페", "새로운 경험"]
     },
 
@@ -234,7 +231,7 @@ travel_data = {
         "destination": "경주",
         "emoji": "🌸",
         "description": "친구들과 함께 역사와 문화를 경험하기 좋은 여행지예요.",
-        "reason": "혼자보다는 함께하는 여행을 즐기면서 역사와 문화에 관한 이야기도 나눌 수 있는 곳이에요.",
+        "reason": "함께하는 여행을 즐기면서 역사와 문화에 관한 이야기도 나눌 수 있는 곳이에요.",
         "tags": ["문화", "역사", "친구", "체험"]
     },
 
@@ -249,7 +246,7 @@ travel_data = {
 
 
 # --------------------------------------------------
-# Header
+# 제목
 # --------------------------------------------------
 
 st.markdown(
@@ -290,42 +287,31 @@ selected_mbti = st.selectbox(
 # 추천 버튼
 # --------------------------------------------------
 
-if st.button("✨ 여행지 추천받기"):
+if st.button("✨ 여행지 추천받기", use_container_width=False):
 
     data = travel_data[selected_mbti]
 
-    st.markdown(
-        f"""
-        <div class="result-card">
+    tags_html = ""
 
-            <div class="result-label">
-                {selected_mbti}에게 추천하는 여행지
-            </div>
+    for tag in data["tags"]:
+        tags_html += f'<span class="tag">{tag}</span>'
 
-            <div class="destination">
-                {data["emoji"]} {data["destination"]}
-            </div>
+    result_html = f"""
+<div class="result-card">
+<div class="result-label">{selected_mbti}에게 추천하는 여행지</div>
+<div class="destination">{data["emoji"]} {data["destination"]}</div>
+<div class="description">{data["description"]}</div>
+<div class="reason-box">
+<strong>💡 추천 이유</strong><br>
+{data["reason"]}
+</div>
+<div style="margin-top: 20px;">
+{tags_html}
+</div>
+</div>
+"""
 
-            <div class="description">
-                {data["description"]}
-            </div>
-
-            <div class="reason-box">
-                <strong>💡 추천 이유</strong><br>
-                {data["reason"]}
-            </div>
-
-            <div style="margin-top: 20px;">
-                {"".join(
-                    f'<span class="tag">{tag}</span>'
-                    for tag in data["tags"]
-                )}
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown(result_html, unsafe_allow_html=True)
 
 
 # --------------------------------------------------
