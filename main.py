@@ -1,14 +1,17 @@
 import streamlit as st
+import random
+import math
 
 # --------------------------------------------------
 # 페이지 설정
 # --------------------------------------------------
 
 st.set_page_config(
-    page_title="MBTI 여행지 추천",
-    page_icon="✈️",
+    page_title="쓰레기통에 골인!",
+    page_icon="🗑️",
     layout="centered"
 )
+
 
 # --------------------------------------------------
 # CSS
@@ -16,233 +19,172 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    .stApp {
-        background: linear-gradient(180deg, #f5f9ff 0%, #ffffff 60%);
-    }
 
-    .main-title {
-        text-align: center;
-        font-size: 42px;
-        font-weight: 800;
-        color: #163a63;
-        margin-top: 30px;
-        margin-bottom: 8px;
-    }
+.stApp {
+    background: linear-gradient(180deg, #f3f8f5 0%, #ffffff 65%);
+}
 
-    .subtitle {
-        text-align: center;
-        font-size: 17px;
-        color: #6b7c93;
-        margin-bottom: 35px;
-    }
+/* 제목 */
+.game-title {
+    text-align: center;
+    font-size: 42px;
+    font-weight: 800;
+    color: #245c45;
+    margin-top: 25px;
+    margin-bottom: 5px;
+}
 
-    .select-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: #163a63;
-        margin-bottom: 10px;
-    }
+.game-subtitle {
+    text-align: center;
+    color: #718078;
+    font-size: 16px;
+    margin-bottom: 30px;
+}
 
-    .result-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        margin-top: 30px;
-        border: 1px solid #e4edf7;
-        box-shadow: 0 8px 25px rgba(35, 82, 125, 0.08);
-    }
+/* 게임 화면 */
+.game-area {
+    background: linear-gradient(180deg, #dff4e8 0%, #f8fcfa 100%);
+    border: 1px solid #d5e9dd;
+    border-radius: 24px;
+    height: 300px;
+    position: relative;
+    margin-bottom: 25px;
+    overflow: hidden;
+}
 
-    .result-label {
-        color: #4a90c2;
-        font-size: 14px;
-        font-weight: 700;
-        margin-bottom: 6px;
-    }
+/* 바닥 */
+.ground {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 45px;
+    background: #d9e4dc;
+}
 
-    .destination {
-        color: #163a63;
-        font-size: 32px;
-        font-weight: 800;
-        margin-bottom: 12px;
-    }
+/* 쓰레기통 */
+.trash-can {
+    position: absolute;
+    right: 70px;
+    bottom: 43px;
+    font-size: 70px;
+}
 
-    .description {
-        color: #526579;
-        font-size: 16px;
-        line-height: 1.7;
-    }
+/* 쓰레기 */
+.trash {
+    position: absolute;
+    left: 70px;
+    bottom: 45px;
+    font-size: 48px;
+}
 
-    .reason-box {
-        background: #f1f7fd;
-        border-radius: 14px;
-        padding: 17px;
-        margin-top: 18px;
-        color: #315574;
-        line-height: 1.6;
-    }
+/* 점수 카드 */
+.score-card {
+    background: white;
+    border: 1px solid #e1ebe5;
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(30, 80, 55, 0.06);
+}
 
-    .tag {
-        display: inline-block;
-        background: #e4f2ff;
-        color: #2670a8;
-        border-radius: 20px;
-        padding: 6px 12px;
-        margin-right: 5px;
-        margin-bottom: 5px;
-        font-size: 13px;
-        font-weight: 600;
-    }
+.score-number {
+    font-size: 30px;
+    font-weight: 800;
+    color: #245c45;
+}
 
-    .footer {
-        text-align: center;
-        color: #9aa9b8;
-        font-size: 13px;
-        margin-top: 45px;
-        margin-bottom: 20px;
-    }
+.score-label {
+    color: #7b8981;
+    font-size: 13px;
+}
 
-    div[data-testid="stButton"] button {
-        border-radius: 12px;
-        height: 48px;
-        font-weight: 700;
-    }
+/* 결과 */
+.result-success {
+    background: #e7f8ed;
+    color: #247044;
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    font-weight: 700;
+    margin-top: 20px;
+}
+
+.result-fail {
+    background: #fff1f1;
+    color: #a84b4b;
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+    font-weight: 700;
+    margin-top: 20px;
+}
+
+.final-card {
+    background: white;
+    border: 1px solid #dfeae3;
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    margin-top: 25px;
+    box-shadow: 0 8px 25px rgba(30, 80, 55, 0.08);
+}
+
+.final-score {
+    font-size: 48px;
+    font-weight: 800;
+    color: #245c45;
+}
+
+.footer {
+    text-align: center;
+    color: #a0aaa5;
+    font-size: 13px;
+    margin-top: 35px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 
 # --------------------------------------------------
-# 여행지 데이터
+# 세션 상태 초기화
 # --------------------------------------------------
 
-travel_data = {
-    "ISTJ": {
-        "destination": "경주",
-        "emoji": "🏛️",
-        "description": "차분하게 역사와 문화를 둘러보며 여행의 의미를 느끼기 좋은 곳이에요.",
-        "reason": "계획적으로 움직이는 여행을 좋아한다면 경주의 역사 유적과 문화 공간을 일정에 맞춰 둘러보는 여행이 잘 어울려요.",
-        "tags": ["역사", "문화", "차분한 여행", "계획형"]
-    },
+if "score" not in st.session_state:
+    st.session_state.score = 0
 
-    "ISFJ": {
-        "destination": "전주",
-        "emoji": "🏘️",
-        "description": "한옥과 맛있는 음식, 여유로운 분위기를 함께 즐길 수 있는 여행지예요.",
-        "reason": "편안하고 따뜻한 분위기에서 맛있는 음식과 문화 체험을 즐기고 싶을 때 잘 어울리는 여행지예요.",
-        "tags": ["한옥", "맛집", "문화", "여유"]
-    },
+if "turn" not in st.session_state:
+    st.session_state.turn = 0
 
-    "INFJ": {
-        "destination": "제주",
-        "emoji": "🌿",
-        "description": "아름다운 자연 속에서 천천히 생각하고 휴식하기 좋은 곳이에요.",
-        "reason": "복잡한 일상에서 벗어나 자연을 바라보며 여유롭게 시간을 보내고 싶을 때 제주도의 자연 풍경이 잘 어울려요.",
-        "tags": ["자연", "힐링", "감성", "산책"]
-    },
+if "combo" not in st.session_state:
+    st.session_state.combo = 0
 
-    "INTJ": {
-        "destination": "서울",
-        "emoji": "🏙️",
-        "description": "다양한 문화와 전시, 공간을 효율적으로 탐방할 수 있는 도시예요.",
-        "reason": "관심 분야를 직접 찾아보고 자신만의 일정으로 도시를 탐방하는 여행을 좋아한다면 서울이 잘 맞아요.",
-        "tags": ["도시", "전시", "문화", "탐방"]
-    },
+if "best_combo" not in st.session_state:
+    st.session_state.best_combo = 0
 
-    "ISTP": {
-        "destination": "강릉",
-        "emoji": "🌊",
-        "description": "바다와 카페, 다양한 활동을 자유롭게 즐길 수 있는 곳이에요.",
-        "reason": "정해진 일정에 얽매이기보다 그날의 기분에 따라 바다와 다양한 활동을 즐기는 여행에 잘 어울려요.",
-        "tags": ["바다", "액티비티", "자유", "카페"]
-    },
+if "last_result" not in st.session_state:
+    st.session_state.last_result = None
 
-    "ISFP": {
-        "destination": "통영",
-        "emoji": "🎨",
-        "description": "바다와 섬, 예술적인 공간이 어우러진 감성적인 여행지예요.",
-        "reason": "아름다운 풍경과 예술적인 분위기를 천천히 즐기며 자신만의 시간을 보내기 좋은 곳이에요.",
-        "tags": ["바다", "예술", "감성", "풍경"]
-    },
+if "game_over" not in st.session_state:
+    st.session_state.game_over = False
 
-    "INFP": {
-        "destination": "제주",
-        "emoji": "🌺",
-        "description": "자연과 아름다운 풍경을 바라보며 자신만의 시간을 보내기 좋은 곳이에요.",
-        "reason": "조용한 자연 속에서 산책하고 풍경을 감상하며 여유로운 시간을 보내는 여행과 잘 어울려요.",
-        "tags": ["자연", "감성", "산책", "힐링"]
-    },
+if "trash" not in st.session_state:
+    st.session_state.trash = "🥤"
 
-    "INTP": {
-        "destination": "대전",
-        "emoji": "🔬",
-        "description": "과학과 연구, 다양한 전시를 접할 수 있는 도시예요.",
-        "reason": "과학관이나 다양한 전시처럼 새로운 지식을 탐구할 수 있는 장소를 방문하는 여행과 잘 어울려요.",
-        "tags": ["과학", "탐구", "전시", "도시"]
-    },
 
-    "ESTP": {
-        "destination": "부산",
-        "emoji": "🌊",
-        "description": "바다부터 맛집과 다양한 활동까지 즐길 수 있는 도시예요.",
-        "reason": "새로운 경험을 직접 체험하고 활기찬 분위기를 즐기고 싶다면 부산의 다양한 관광지를 추천해요.",
-        "tags": ["바다", "활동", "맛집", "도시"]
-    },
+# --------------------------------------------------
+# 새 게임
+# --------------------------------------------------
 
-    "ESFP": {
-        "destination": "부산",
-        "emoji": "🎡",
-        "description": "맛집과 바다, 관광 명소를 다양하게 즐길 수 있는 활기찬 여행지예요.",
-        "reason": "친구나 가족과 함께 돌아다니며 맛있는 음식과 재미있는 경험을 만들고 싶을 때 잘 어울려요.",
-        "tags": ["맛집", "바다", "관광", "즐거움"]
-    },
-
-    "ENFP": {
-        "destination": "제주",
-        "emoji": "🌴",
-        "description": "새로운 장소를 발견하고 다양한 경험을 즐기기 좋은 여행지예요.",
-        "reason": "자연, 카페, 관광지 등 여러 장소를 자유롭게 돌아다니는 여행과 잘 어울려요.",
-        "tags": ["모험", "자연", "카페", "새로운 경험"]
-    },
-
-    "ENTP": {
-        "destination": "서울",
-        "emoji": "🚇",
-        "description": "새로운 장소와 문화, 사람들을 다양하게 만날 수 있는 도시예요.",
-        "reason": "매번 다른 장소를 탐방하고 새로운 경험을 찾아다니는 도시 여행을 즐기기에 좋아요.",
-        "tags": ["도시", "탐방", "문화", "새로운 경험"]
-    },
-
-    "ESTJ": {
-        "destination": "서울",
-        "emoji": "🏙️",
-        "description": "효율적인 이동과 다양한 볼거리를 함께 즐길 수 있는 도시예요.",
-        "reason": "하루 일정을 체계적으로 구성하고 여러 관광지를 효율적으로 둘러보는 여행에 잘 어울려요.",
-        "tags": ["도시", "계획", "관광", "효율적인 여행"]
-    },
-
-    "ESFJ": {
-        "destination": "전주",
-        "emoji": "🍲",
-        "description": "맛있는 음식과 문화 체험을 함께 즐기기 좋은 여행지예요.",
-        "reason": "사람들과 함께 맛있는 음식을 먹고 다양한 문화 체험을 즐기는 여행에 잘 어울려요.",
-        "tags": ["맛집", "한옥", "문화", "친구와 여행"]
-    },
-
-    "ENFJ": {
-        "destination": "경주",
-        "emoji": "🌸",
-        "description": "친구들과 함께 역사와 문화를 경험하기 좋은 여행지예요.",
-        "reason": "함께하는 여행을 즐기면서 역사와 문화에 관한 이야기도 나눌 수 있는 곳이에요.",
-        "tags": ["문화", "역사", "친구", "체험"]
-    },
-
-    "ENTJ": {
-        "destination": "서울",
-        "emoji": "🏢",
-        "description": "다양한 문화와 도시 경험을 한 번에 즐길 수 있는 여행지예요.",
-        "reason": "효율적인 동선으로 여러 장소를 방문하고 새로운 문화와 공간을 빠르게 경험하는 여행과 잘 어울려요.",
-        "tags": ["도시", "문화", "계획", "탐방"]
-    }
-}
+def reset_game():
+    st.session_state.score = 0
+    st.session_state.turn = 0
+    st.session_state.combo = 0
+    st.session_state.best_combo = 0
+    st.session_state.last_result = None
+    st.session_state.game_over = False
+    st.session_state.trash = "🥤"
 
 
 # --------------------------------------------------
@@ -250,68 +192,286 @@ travel_data = {
 # --------------------------------------------------
 
 st.markdown(
-    '<div class="main-title">✈️ MBTI 여행지 추천</div>',
+    '<div class="game-title">🗑️ 쓰레기통에 골인!</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="subtitle">나의 MBTI에 어울리는 여행지를 찾아보세요</div>',
+    '<div class="game-subtitle">방향과 세기를 조절해서 쓰레기를 쓰레기통에 던져보세요!</div>',
     unsafe_allow_html=True
 )
 
 
 # --------------------------------------------------
-# MBTI 선택
+# 게임 종료 전
 # --------------------------------------------------
 
-st.markdown(
-    '<div class="select-title">나의 MBTI를 선택해주세요</div>',
-    unsafe_allow_html=True
-)
+if not st.session_state.game_over:
 
-mbti_list = [
-    "ISTJ", "ISFJ", "INFJ", "INTJ",
-    "ISTP", "ISFP", "INFP", "INTP",
-    "ESTP", "ESFP", "ENFP", "ENTP",
-    "ESTJ", "ESFJ", "ENFJ", "ENTJ"
-]
+    # 게임 화면
+    st.markdown(
+        f"""
+        <div class="game-area">
+            <div class="trash">{st.session_state.trash}</div>
+            <div class="trash-can">🗑️</div>
+            <div class="ground"></div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-selected_mbti = st.selectbox(
-    "MBTI",
-    mbti_list,
-    label_visibility="collapsed"
-)
+    # 점수 정보
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown(
+            f"""
+            <div class="score-card">
+                <div class="score-number">{st.session_state.score}</div>
+                <div class="score-label">점수</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col2:
+        st.markdown(
+            f"""
+            <div class="score-card">
+                <div class="score-number">
+                    {st.session_state.turn}/10
+                </div>
+                <div class="score-label">던진 횟수</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with col3:
+        st.markdown(
+            f"""
+            <div class="score-card">
+                <div class="score-number">
+                    {st.session_state.combo}
+                </div>
+                <div class="score-label">현재 콤보</div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.write("")
+
+    # --------------------------------------------------
+    # 쓰레기 선택
+    # --------------------------------------------------
+
+    st.subheader("🧹 어떤 쓰레기를 던질까요?")
+
+    trash_options = {
+        "🥤 플라스틱 컵": "🥤",
+        "📄 종이": "📄",
+        "🍌 바나나 껍질": "🍌",
+        "🥫 캔": "🥫",
+        "🍾 페트병": "🍾"
+    }
+
+    selected_trash = st.selectbox(
+        "쓰레기 선택",
+        list(trash_options.keys()),
+        label_visibility="collapsed"
+    )
+
+    st.session_state.trash = trash_options[selected_trash]
+
+    # --------------------------------------------------
+    # 조작
+    # --------------------------------------------------
+
+    st.subheader("🎯 던지기 조절")
+
+    angle = st.slider(
+        "↗️ 방향",
+        min_value=0,
+        max_value=100,
+        value=50,
+        help="50에 가까울수록 쓰레기통 방향입니다."
+    )
+
+    power = st.slider(
+        "💨 던지는 힘",
+        min_value=0,
+        max_value=100,
+        value=50,
+        help="적당한 힘으로 던져보세요."
+    )
+
+    # --------------------------------------------------
+    # 던지기
+    # --------------------------------------------------
+
+    if st.button("🗑️ 던지기!", use_container_width=True):
+
+        # 목표값
+        target_angle = 68
+        target_power = 64
+
+        # 오차 계산
+        angle_error = abs(angle - target_angle)
+        power_error = abs(power - target_power)
+
+        # 약간의 랜덤 요소
+        random_error = random.randint(-5, 5)
+
+        total_error = angle_error + power_error + random_error
+
+        st.session_state.turn += 1
+
+        # 성공 판정
+        if total_error <= 18:
+
+            base_score = 100
+
+            # 정확도에 따른 추가 점수
+            accuracy_bonus = max(
+                0,
+                int((18 - total_error) * 5)
+            )
+
+            # 콤보
+            st.session_state.combo += 1
+
+            combo_bonus = (
+                st.session_state.combo - 1
+            ) * 20
+
+            earned_score = (
+                base_score
+                + accuracy_bonus
+                + combo_bonus
+            )
+
+            st.session_state.score += earned_score
+
+            st.session_state.best_combo = max(
+                st.session_state.best_combo,
+                st.session_state.combo
+            )
+
+            st.session_state.last_result = (
+                "success",
+                earned_score
+            )
+
+        else:
+
+            st.session_state.combo = 0
+
+            st.session_state.last_result = (
+                "fail",
+                0
+            )
+
+        # 10번 끝
+        if st.session_state.turn >= 10:
+            st.session_state.game_over = True
+
+        st.rerun()
+
+    # --------------------------------------------------
+    # 최근 결과
+    # --------------------------------------------------
+
+    if st.session_state.last_result:
+
+        result_type, earned_score = st.session_state.last_result
+
+        if result_type == "success":
+
+            st.markdown(
+                f"""
+                <div class="result-success">
+                    🎉 골인 성공! +{earned_score}점<br>
+                    현재 콤보: {st.session_state.combo}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        else:
+
+            st.markdown(
+                """
+                <div class="result-fail">
+                    💨 아쉽게 빗나갔어요!<br>
+                    방향과 힘을 조금 조절해보세요.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 
 # --------------------------------------------------
-# 추천 버튼
+# 게임 종료
 # --------------------------------------------------
 
-if st.button("✨ 여행지 추천받기", use_container_width=False):
+else:
 
-    data = travel_data[selected_mbti]
+    st.markdown(
+        """
+        <div class="final-card">
+            <div style="font-size: 55px;">🏆</div>
+            <h2>게임 종료!</h2>
+            <p>10번의 도전이 끝났습니다.</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    tags_html = ""
+    st.markdown(
+        f"""
+        <div class="final-card">
+            <div style="color:#718078;">
+                최종 점수
+            </div>
 
-    for tag in data["tags"]:
-        tags_html += f'<span class="tag">{tag}</span>'
+            <div class="final-score">
+                {st.session_state.score}점
+            </div>
 
-    result_html = f"""
-<div class="result-card">
-<div class="result-label">{selected_mbti}에게 추천하는 여행지</div>
-<div class="destination">{data["emoji"]} {data["destination"]}</div>
-<div class="description">{data["description"]}</div>
-<div class="reason-box">
-<strong>💡 추천 이유</strong><br>
-{data["reason"]}
-</div>
-<div style="margin-top: 20px;">
-{tags_html}
-</div>
-</div>
-"""
+            <div style="margin-top:15px;color:#718078;">
+                최고 콤보 : {st.session_state.best_combo}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown(result_html, unsafe_allow_html=True)
+    st.write("")
+
+    if st.session_state.score >= 1200:
+        message = "🌟 완벽해요! 쓰레기통 명사수!"
+    elif st.session_state.score >= 800:
+        message = "👏 훌륭해요! 꽤 정확하게 던졌네요!"
+    elif st.session_state.score >= 400:
+        message = "👍 좋아요! 조금만 더 연습해봐요!"
+    else:
+        message = "💪 괜찮아요! 다음에는 더 높은 점수를 노려봐요!"
+
+    st.markdown(
+        f"""
+        <div class="result-success">
+            {message}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.write("")
+
+    if st.button("🔄 다시 플레이", use_container_width=True):
+        reset_game()
+        st.rerun()
 
 
 # --------------------------------------------------
@@ -319,6 +479,10 @@ if st.button("✨ 여행지 추천받기", use_container_width=False):
 # --------------------------------------------------
 
 st.markdown(
-    '<div class="footer">MBTI는 여행 스타일을 가볍게 알아보기 위한 참고용이에요 ✈️</div>',
+    """
+    <div class="footer">
+        ♻️ 쓰레기는 올바르게 분리배출해요!
+    </div>
+    """,
     unsafe_allow_html=True
 )
